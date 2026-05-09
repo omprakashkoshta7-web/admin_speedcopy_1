@@ -3,6 +3,7 @@ import { Plus, Search, Edit2, Trash2, X, CheckCircle, Package, Download, Refresh
 import { useAsync } from "../../hooks/useAsync";
 import { getProductCategories, getProducts, createProduct, updateProduct, deleteProduct, patchProductDiscount, bulkDiscountProducts, getProductDiscountHistory, getAdminVariantsByProduct, getTemplateDefinitions } from "../../api/admin";
 import { uploadImage } from "../../utils/uploadImage";
+import { resolveImageUrl, resolveThumbnail, getAlternateImageUrl, getPlaceholderImage } from "../../utils/imageUtils";
 
 const CS = { border: "1px solid rgba(197,206,255,0.52)", boxShadow: "0 12px 30px rgba(15,23,42,0.08)" };
 
@@ -72,6 +73,69 @@ const emptyForm = {
   slug: "",
 };
 
+const LOCAL_PRODUCT_IMAGE_PREVIEWS_KEY = 'speedcopy_admin_product_image_previews';
+
+function loadLocalProductImagePreviews(): Record<string, string> {
+  try {
+    const raw = localStorage.getItem(LOCAL_PRODUCT_IMAGE_PREVIEWS_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function persistLocalProductImagePreviews(next: Record<string, string>) {
+  try {
+    localStorage.setItem(LOCAL_PRODUCT_IMAGE_PREVIEWS_KEY, JSON.stringify(next));
+  } catch {
+    // Ignore quota errors; server URL fallback will still be used.
+  }
+}
+
+function createPersistentPreview(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const objectUrl = URL.createObjectURL(file);
+
+    img.onload = () => {
+      URL.revokeObjectURL(objectUrl);
+      const maxSize = 320;
+      let { width, height } = img;
+
+      if (width > maxSize || height > maxSize) {
+        if (width > height) {
+          height = Math.round((height * maxSize) / width);
+          width = maxSize;
+        } else {
+          width = Math.round((width * maxSize) / height);
+          height = maxSize;
+        }
+      }
+
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        reject(new Error('Canvas not supported'));
+        return;
+      }
+
+      ctx.drawImage(img, 0, 0, width, height);
+      resolve(canvas.toDataURL('image/jpeg', 0.72));
+    };
+
+    img.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      reject(new Error('Failed to create preview'));
+    };
+
+    img.src = objectUrl;
+  });
+}
+
 export default function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [search, setSearch] = useState("");
@@ -82,7 +146,10 @@ export default function ProductsPage() {
   const [form, setForm] = useState(emptyForm);
   const [saved, setSaved] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [localSelectedImagePreview, setLocalSelectedImagePreview] = useState("");
   const [imageUploading, setImageUploading] = useState(false);
+  const [localProductImagePreviews, setLocalProductImagePreviews] = useState<Record<string, string>>(loadLocalProductImagePreviews);
+
   // Product detail panel
   const [detailProduct, setDetailProduct] = useState<Product | null>(null);
   const [detailVariants, setDetailVariants] = useState<any[]>([]);
@@ -149,8 +216,9 @@ export default function ProductsPage() {
         setProducts(productsArray.map((p: any) => {
           const categoryId = p.category?._id || p.category?.id || p.category;
           const categoryObj = categories.find((c: any) => String(c.id) === String(categoryId));
+          const productId = String(p.id || p._id);
           return {
-            id: p.id || p._id,
+            id: productId,
             name: p.name,
             category: categoryObj?.name || p.category?.name || "Unknown",
             categoryId: String(categoryId || ""),
@@ -158,7 +226,7 @@ export default function ProductsPage() {
             unit: p.unit || "per piece",
             active: p.isActive !== false,
             vendors: 0,
-            imageUrl: p.images?.[0] || p.thumbnail || p.imageUrl || p.image || "",
+            imageUrl: localProductImagePreviews[productId] || resolveThumbnail(p.images, p.thumbnail, p.image || p.coverImage, p.imageUrl),
             mrp: p.mrp ?? p.basePrice ?? 0,
             sale_price: p.sale_price ?? p.salePrice ?? p.mrp ?? p.basePrice ?? 0,
             discount_pct: p.discount_pct ?? p.discountPct ?? 0,
@@ -179,7 +247,7 @@ export default function ProductsPage() {
       console.error('Error processing products:', error);
       setProducts([]);
     }
-  }, [productsData, categories]);
+  }, [productsData, categories, localProductImagePreviews]);
 
   const filtered = products.filter(p =>
     (catFilter === "all" || p.category === catFilter) &&
@@ -193,6 +261,7 @@ export default function ProductsPage() {
     setShowForm(true);
     setSaved(false);
     setImagePreview(null);
+    setLocalSelectedImagePreview("");
   };
 
   // Open product detail panel
@@ -242,6 +311,7 @@ export default function ProductsPage() {
     setShowForm(true);
     setSaved(false);
     setImagePreview(p.imageUrl || null);
+    setLocalSelectedImagePreview("");
   };
 
   const save = async () => {
@@ -270,13 +340,21 @@ export default function ProductsPage() {
         ...(form.slug ? { slug: form.slug } : {
           slug: form.name.toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]/g, ''),
         }),
-        ...(form.imageUrl ? { images: [form.imageUrl], thumbnail: form.imageUrl } : {}),
+        ...(form.imageUrl ? { images: [form.imageUrl], thumbnail: form.imageUrl, imageUrl: form.imageUrl } : {}),
       };
-
+ 
       if (Number.isNaN(payload.basePrice)) { alert('Invalid base price'); return; }
-
+      const localUploadPreview = localSelectedImagePreview || (imagePreview?.startsWith('data:') ? imagePreview : '');
+ 
       if (editId) {
         const updated: any = await updateProduct(editId, payload);
+        if (localUploadPreview) {
+          setLocalProductImagePreviews(prev => {
+            const next = { ...prev, [editId]: localUploadPreview };
+            persistLocalProductImagePreviews(next);
+            return next;
+          });
+        }
         setProducts(prev => prev.map(p => p.id === editId ? {
           ...p,
           name: updated.name ?? payload.name,
@@ -284,7 +362,7 @@ export default function ProductsPage() {
           basePrice: updated.basePrice ?? payload.basePrice,
           unit: updated.unit ?? payload.unit,
           active: updated.isActive !== false,
-          imageUrl: updated.images?.[0] || updated.thumbnail || form.imageUrl,
+          imageUrl: localUploadPreview || resolveThumbnail(updated.images, updated.thumbnail, updated.image, form.imageUrl || updated.imageUrl || p.imageUrl),
           flowType: payload.flowType,
           requiresDesign: payload.requiresDesign,
           designMode: payload.designMode || "",
@@ -292,8 +370,16 @@ export default function ProductsPage() {
         } : p));
       } else {
         const created: any = await createProduct(payload);
+        const productId = String(created.id ?? created._id ?? `P-${Math.random()}`);
+        if (localUploadPreview) {
+          setLocalProductImagePreviews(prev => {
+            const next = { ...prev, [productId]: localUploadPreview };
+            persistLocalProductImagePreviews(next);
+            return next;
+          });
+        }
         const newProd: Product = {
-          id: created.id ?? created._id ?? `P-${Math.random()}`,
+          id: productId,
           name: created.name ?? payload.name,
           category: categories.find((c: any) => c.id === payload.category)?.name || form.categoryName,
           categoryId: payload.category,
@@ -301,7 +387,7 @@ export default function ProductsPage() {
           unit: created.unit ?? payload.unit ?? 'per piece',
           active: created.isActive !== false,
           vendors: 0,
-          imageUrl: created.images?.[0] || created.thumbnail || form.imageUrl,
+          imageUrl: localUploadPreview || resolveThumbnail(created.images, created.thumbnail, created.image, form.imageUrl || created.imageUrl),
           flowType: payload.flowType,
           requiresDesign: payload.requiresDesign,
           designMode: payload.designMode || "",
@@ -590,7 +676,16 @@ export default function ProductsPage() {
                       <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden"
                         style={{ backgroundColor: "#f1f5f9" }}>
                         {p.imageUrl
-                          ? <img src={p.imageUrl} alt={p.name} className="w-full h-full object-cover" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                          ? <img src={resolveImageUrl(p.imageUrl)} alt={p.name} className="w-full h-full object-cover" onError={(e) => {
+                            const img = e.currentTarget as HTMLImageElement;
+                            const fallback = getAlternateImageUrl(p.imageUrl, img.src);
+                            if (fallback && !img.dataset.fallbackTried) {
+                              img.dataset.fallbackTried = '1';
+                              img.src = fallback;
+                              return;
+                            }
+                            img.src = getPlaceholderImage();
+                          }} />
                           : <Package size={14} style={{ color: "#334155" }} />}
                       </div>
                       <div>
@@ -805,7 +900,17 @@ export default function ProductsPage() {
                   <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Product Image</p>
                   <div className="flex items-center gap-2">
                     {imagePreview && (
-                      <img src={imagePreview} alt="preview" className="w-12 h-12 rounded-xl object-cover border border-gray-200 flex-shrink-0" />
+                      <img src={resolveImageUrl(imagePreview)} alt="preview" className="w-12 h-12 rounded-xl object-cover border border-gray-200 flex-shrink-0"
+                        onError={(e) => {
+                          const img = e.currentTarget as HTMLImageElement;
+                          const fallback = getAlternateImageUrl(imagePreview, img.src);
+                          if (fallback && !img.dataset.fallbackTried) {
+                            img.dataset.fallbackTried = '1';
+                            img.src = fallback;
+                            return;
+                          }
+                          img.src = getPlaceholderImage();
+                        }} />
                     )}
                     <div className="flex-1 flex items-center gap-2">
                       <input type="text" placeholder="https://cdn.example.com/..." value={form.imageUrl}
@@ -817,8 +922,15 @@ export default function ProductsPage() {
                         <input type="file" accept="image/*" className="hidden" disabled={imageUploading}
                           onChange={async e => {
                             const file = e.target.files?.[0]; if (!file) return;
+                            const localPreview = URL.createObjectURL(file);
+                            setImagePreview(localPreview);
                             setImageUploading(true);
-                            try { const url = await uploadImage(file, 'products'); setForm(p => ({ ...p, imageUrl: url })); setImagePreview(url); }
+                            try {
+                              const persistentPreview = await createPersistentPreview(file).catch(() => "");
+                              setLocalSelectedImagePreview(persistentPreview);
+                              const url = await uploadImage(file, 'products');
+                              setForm(p => ({ ...p, imageUrl: url }));
+                            }
                             catch (err: any) { alert(err?.message || "Upload failed"); }
                             finally { setImageUploading(false); e.target.value = ""; }
                           }} />
@@ -826,7 +938,19 @@ export default function ProductsPage() {
                     </div>
                   </div>
                   {imagePreview && (
-                    <button type="button" onClick={() => { setImagePreview(null); setForm(p => ({ ...p, imageUrl: '' })); }}
+                    <button type="button" onClick={() => {
+                      setImagePreview(null);
+                      setLocalSelectedImagePreview("");
+                      setForm(p => ({ ...p, imageUrl: '' }));
+                      if (editId) {
+                        setLocalProductImagePreviews(prev => {
+                          const next = { ...prev };
+                          delete next[editId];
+                          persistLocalProductImagePreviews(next);
+                          return next;
+                        });
+                      }
+                    }}
                       className="text-xs text-red-500 hover:text-red-700 font-semibold mt-1.5">Remove image</button>
                   )}
                 </div>
@@ -1093,8 +1217,18 @@ export default function ProductsPage() {
             {/* Header */}
             <div className="flex items-center gap-4 px-6 py-4 border-b border-gray-100 flex-shrink-0">
               {detailProduct.imageUrl && (
-                <img src={detailProduct.imageUrl} alt={detailProduct.name}
-                  className="w-14 h-14 rounded-xl object-cover border border-gray-200 flex-shrink-0" />
+                <img src={resolveImageUrl(detailProduct.imageUrl)} alt={detailProduct.name}
+                  className="w-14 h-14 rounded-xl object-cover border border-gray-200 flex-shrink-0"
+                  onError={(e) => {
+                    const img = e.currentTarget as HTMLImageElement;
+                    const fallback = getAlternateImageUrl(detailProduct.imageUrl, img.src);
+                    if (fallback && !img.dataset.fallbackTried) {
+                      img.dataset.fallbackTried = '1';
+                      img.src = fallback;
+                      return;
+                    }
+                    img.src = getPlaceholderImage();
+                  }} />
               )}
               <div className="flex-1 min-w-0">
                 <h2 className="text-base font-bold text-gray-900 truncate">{detailProduct.name}</h2>

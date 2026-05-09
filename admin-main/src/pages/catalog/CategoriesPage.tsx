@@ -5,6 +5,7 @@ import { useAsync } from "../../hooks/useAsync";
 import { getProductCategories, createProductCategory, updateProductCategory, deleteProductCategory, getProducts } from "../../api/admin";
 import type { AdminCategoriesResponse } from "../../api/admin";
 import LoadingState from "../../components/ui/LoadingState";
+import { resolveImageUrl } from "../../utils/imageUtils";
 
 type CategoryForm = {
   name: string;
@@ -250,7 +251,7 @@ export default function CategoriesPage() {
                   <div className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl flex-shrink-0 overflow-hidden"
                     style={{ backgroundColor: c.active ? ADMIN_COLORS.gray100 : ADMIN_COLORS.gray200 }}>
                     {c.image ? (
-                      <img src={c.image} alt={c.name} className="w-full h-full object-cover" />
+                      <img src={resolveImageUrl(c.image)} alt={c.name} className="w-full h-full object-cover" />
                     ) : (
                       c.icon
                     )}

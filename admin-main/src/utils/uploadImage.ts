@@ -10,6 +10,8 @@
  *  3. Vercel env vars: VITE_CLOUDINARY_CLOUD_NAME, VITE_CLOUDINARY_UPLOAD_PRESET
  */
 
+import { resolveImageUrl } from './imageUtils';
+
 const CLOUDINARY_CLOUD_NAME    = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME    || '';
 const CLOUDINARY_UPLOAD_PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET || '';
 
@@ -86,7 +88,7 @@ async function uploadViaBackend(file: File, folder: string): Promise<string> {
       if (res.ok) {
         const data = await res.json();
         const url: string = data?.data?.url || data?.data?.imageUrl || data?.url || data?.imageUrl || data?.data?.secure_url;
-        if (url) return url.startsWith('http') ? url : `${API_BASE}${url}`;
+        if (url) return resolveImageUrl(url);
       }
     } catch { /* try next */ }
   }
