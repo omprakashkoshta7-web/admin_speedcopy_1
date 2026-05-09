@@ -10,8 +10,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@pqina/pintura": "^8.1.2",
-    "@pqina/react-pintura": "^1.1.0",
+    "@pqina/pintura": "^8.96.4",
+    "@pqina/react-pintura": "^9.0.4",
     "autoprefixer": "^10.5.0",
     "firebase": "^12.12.1",
     "lucide-react": "^1.8.0",
