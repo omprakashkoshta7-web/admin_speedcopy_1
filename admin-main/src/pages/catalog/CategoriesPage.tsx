@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Plus, Edit2, Trash2, X, CheckCircle, Layers, ToggleLeft, ToggleRight, ChevronRight, Tag, Package, Download, RefreshCw } from "lucide-react";
+import { Plus, Edit2, Trash2, X, CheckCircle, Layers, ToggleLeft, ToggleRight, ChevronRight, Tag, Package, Download, RefreshCw, AlertTriangle } from "lucide-react";
 import { ADMIN_COLORS } from "../../utils/colors";
 import { useAsync } from "../../hooks/useAsync";
 import { getProductCategories, createProductCategory, updateProductCategory, deleteProductCategory, getProducts } from "../../api/admin";
@@ -27,6 +27,7 @@ export default function CategoriesPage() {
   const [loading, setLoading] = useState(false);
   const [productCounts, setProductCounts] = useState<Record<string, number>>({});
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [formError, setFormError] = useState("");
 
   // Fetch categories from backend
   const { data: categoriesData, loading: categoriesLoading, refetch: refetchCategories } = useAsync<AdminCategoriesResponse>(
@@ -91,6 +92,7 @@ export default function CategoriesPage() {
     setShowForm(true); 
     setSaved(false); 
     setImagePreview(null);
+    setFormError("");
   };
   
   const openEdit = (c: any) => {
@@ -99,11 +101,18 @@ export default function CategoriesPage() {
     setShowForm(true); 
     setSaved(false);
     setImagePreview(c.image || null);
+    setFormError("");
   };
 
   const save = async () => {
-    if (!form.name) {
-      alert('Please enter a category name');
+    const missingFields = [
+      !form.name.trim() && "Category name",
+      !form.icon.trim() && "Icon",
+      !form.flowType && "Flow type",
+    ].filter(Boolean);
+
+    if (missingFields.length > 0) {
+      setFormError(`Please fill: ${missingFields.join(", ")}.`);
       return;
     }
     const slug = form.slug || form.name.toLowerCase().replace(/\s+/g, "-");
@@ -113,6 +122,7 @@ export default function CategoriesPage() {
 
     try {
       setLoading(true);
+      setFormError("");
       console.log('Saving category:', safeForm);
 
       if (editId) {
@@ -132,7 +142,7 @@ export default function CategoriesPage() {
       }, 1500);
     } catch (err: any) {
       console.error('Failed to save category:', err);
-      alert(`Error: ${err?.message || 'Failed to save category'}`);
+      setFormError(err?.message || 'Failed to save category. Please check the form and try again.');
     } finally {
       setLoading(false);
     }
@@ -387,7 +397,10 @@ export default function CategoriesPage() {
                       type={f.type}
                       placeholder={f.placeholder}
                       value={form[f.key as keyof typeof form]}
-                      onChange={e => setForm(p => ({ ...p, [f.key]: e.target.value }))}
+                      onChange={e => {
+                        setFormError("");
+                        setForm(p => ({ ...p, [f.key]: e.target.value }));
+                      }}
                       className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-gray-900 transition" />
                   </div>
                 ))}
@@ -400,6 +413,7 @@ export default function CategoriesPage() {
                     placeholder="https://example.com/image.jpg"
                     value={form.image}
                     onChange={e => {
+                      setFormError("");
                       setForm(p => ({ ...p, image: e.target.value }));
                       setImagePreview(e.target.value || null);
                     }}
@@ -428,13 +442,22 @@ export default function CategoriesPage() {
                   <label className="block text-xs font-bold text-gray-700 mb-2 uppercase tracking-wide">Flow Type</label>
                   <select 
                     value={form.flowType}
-                    onChange={e => setForm(p => ({ ...p, flowType: e.target.value }))}
+                    onChange={e => {
+                      setFormError("");
+                      setForm(p => ({ ...p, flowType: e.target.value }));
+                    }}
                     className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-gray-900 transition">
                     <option value="printing">Printing</option>
                     <option value="gifting">Gifting</option>
                     <option value="shopping">Shopping</option>
                   </select>
                 </div>
+                {formError && (
+                  <div className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2.5">
+                    <AlertTriangle size={15} className="mt-0.5 flex-shrink-0 text-red-500" />
+                    <p className="text-sm font-semibold text-red-600">{formError}</p>
+                  </div>
+                )}
                 <div className="flex gap-3 pt-3">
                   <button onClick={() => setShowForm(false)}
                     className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition">

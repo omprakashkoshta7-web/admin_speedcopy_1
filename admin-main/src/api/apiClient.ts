@@ -1,3 +1,5 @@
+import { toFriendlyApiError } from '../utils/apiError';
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000/api';
 const AUTH_TOKEN_KEY = 'admin_token';
 
@@ -60,9 +62,11 @@ export const request = async <T>(path: string, options: RequestInit = {}): Promi
       }
     }
 
-    const error = new Error(data?.message || response.statusText || 'API request failed');
+    const friendlyMessage = toFriendlyApiError(data || {}, response.statusText || 'API request failed');
+    const error = new Error(friendlyMessage);
     (error as any).statusCode = data?.statusCode || response.status;
     (error as any).errors = data?.errors || null;
+    (error as any).data = data;
     throw error;
   }
 

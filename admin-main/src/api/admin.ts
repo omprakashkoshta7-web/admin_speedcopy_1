@@ -480,6 +480,7 @@ export const createProductCategory = async (data: {
       name: data.name,
       slug: data.slug,
       description: data.description,
+      icon: data.icon,
       image: data.image || '',
       flowType: data.flowType,
     }),
@@ -502,7 +503,8 @@ export const updateProductCategory = async (id: string, data: {
       name: data.name,
       slug: data.slug,
       description: data.description,
-      image: data.image ?? data.icon,
+      icon: data.icon,
+      image: data.image,
       flowType: data.flowType,
       isActive: data.isActive ?? data.active,
     }),
@@ -1589,7 +1591,6 @@ export const uploadCatalogFile = async (formData: FormData) => {
 export const uploadCategoryImages = uploadCatalogImage;
 export const uploadBusinessPrintingFile = uploadCatalogFile;
 export const uploadPrintingFile = uploadCatalogFile;
-
 
 
 
