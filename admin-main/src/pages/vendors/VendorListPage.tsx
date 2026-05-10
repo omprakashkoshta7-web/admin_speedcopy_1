@@ -372,8 +372,15 @@ export default function VendorListPage() {
 
   const handleCreateVendor = async () => {
     try {
-      if (!newVendorForm.name || !newVendorForm.email || !newVendorForm.phone || !newVendorForm.password) {
-        setActionError('Please fill in all required fields (name, email, phone, password)');
+      const missingFields = [
+        !newVendorForm.name.trim() && "Vendor name",
+        !newVendorForm.email.trim() && "Email",
+        !newVendorForm.phone.trim() && "Phone",
+        !newVendorForm.password && "Password",
+      ].filter(Boolean);
+
+      if (missingFields.length > 0) {
+        setActionError(`Please fill: ${missingFields.join(", ")}.`);
         return;
       }
       setLoading(true);

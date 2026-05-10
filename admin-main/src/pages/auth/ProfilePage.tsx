@@ -112,8 +112,14 @@ export default function ProfilePage() {
     setPwError("");
     setPwSuccess("");
 
-    if (!pwForm.current || !pwForm.newPw || !pwForm.confirm) {
-      setPwError("All three fields are required.");
+    const missingFields = [
+      !pwForm.current && "Current password",
+      !pwForm.newPw && "New password",
+      !pwForm.confirm && "Confirm new password",
+    ].filter(Boolean);
+
+    if (missingFields.length > 0) {
+      setPwError(`Please fill: ${missingFields.join(", ")}.`);
       return;
     }
     if (pwForm.newPw.length < 8) {

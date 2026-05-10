@@ -315,8 +315,14 @@ export default function ProductsPage() {
   };
 
   const save = async () => {
-    if (!form.name || !form.categoryId || !form.basePrice) {
-      alert('Please fill in all required fields');
+    const missingFields = [
+      !form.name.trim() && "Product name",
+      !form.categoryId && "Category",
+      !form.basePrice && "Base price",
+    ].filter(Boolean);
+
+    if (missingFields.length > 0) {
+      showToast(`Please fill: ${missingFields.join(", ")}.`, "error");
       return;
     }
     try {
@@ -343,7 +349,7 @@ export default function ProductsPage() {
         ...(form.imageUrl ? { images: [form.imageUrl], thumbnail: form.imageUrl, imageUrl: form.imageUrl } : {}),
       };
  
-      if (Number.isNaN(payload.basePrice)) { alert('Invalid base price'); return; }
+      if (Number.isNaN(payload.basePrice)) { showToast("Base price must be a valid number.", "error"); return; }
       const localUploadPreview = localSelectedImagePreview || (imagePreview?.startsWith('data:') ? imagePreview : '');
  
       if (editId) {

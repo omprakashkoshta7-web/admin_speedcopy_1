@@ -95,8 +95,13 @@ export default function SLADashboardPage() {
   };
 
   const handleCompensate = async () => {
-    if (!compensateModal || !compensateForm.compensationValue || compensateForm.compensationValue <= 0) {
-      alert("Please enter a valid compensation amount");
+    const missingFields = [
+      !compensateForm.compensationType && "Compensation type",
+      (!compensateForm.compensationValue || compensateForm.compensationValue <= 0) && "Compensation amount",
+    ].filter(Boolean);
+
+    if (!compensateModal || missingFields.length > 0) {
+      alert(`Please fill: ${missingFields.join(", ")}.`);
       return;
     }
     setActionLoading(true);
@@ -115,8 +120,17 @@ export default function SLADashboardPage() {
   };
 
   const handleCreatePolicy = async () => {
-    if (!policyForm.name || !policyForm.flowType || !policyForm.fromStatus || !policyForm.toStatus) {
-      alert("Please fill all required fields"); 
+    const missingFields = [
+      !policyForm.name.trim() && "Policy name",
+      !policyForm.flowType && "Flow type",
+      !policyForm.fromStatus && "From status",
+      !policyForm.toStatus && "To status",
+      (!policyForm.maxMinutes || policyForm.maxMinutes <= 0) && "Max time",
+      (!policyForm.warningMinutes || policyForm.warningMinutes <= 0) && "Warning time",
+    ].filter(Boolean);
+
+    if (missingFields.length > 0) {
+      alert(`Please fill: ${missingFields.join(", ")}.`);
       return;
     }
     if (policyForm.warningMinutes >= policyForm.maxMinutes) {

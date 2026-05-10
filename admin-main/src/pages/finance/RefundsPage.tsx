@@ -76,8 +76,14 @@ export default function RefundsPage() {
   };
 
   const handleSubmit = async () => {
-    if (!form.orderId || !form.customerId || !form.amount) {
-      setErrorMessage("Order ID, customer ID, and amount are required.");
+    const missingFields = [
+      !form.orderId.trim() && "Order ID",
+      !form.customerId.trim() && "Customer ID",
+      !form.amount && "Refund amount",
+    ].filter(Boolean);
+
+    if (missingFields.length > 0) {
+      setErrorMessage(`Please fill: ${missingFields.join(", ")}.`);
       return;
     }
     if (!/^[0-9a-f]{24}$/i.test(form.orderId)) {
