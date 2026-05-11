@@ -4,7 +4,7 @@ import {
   LayoutDashboard, ClipboardList, Clock, Store, Users, DollarSign,
   RotateCcw, BookOpen, TrendingUp, HeadphonesIcon, BarChart2, Settings,
   Truck, LogOut, Bell, ChevronDown, Shield, Wallet,
-  Search, Package, Layers, Tag, X, Boxes, Sliders, LayoutTemplate, Image
+  Search, Package, Layers, Tag, X, Boxes, Sliders, LayoutTemplate
 } from "lucide-react";
 import { logoutFirebase } from "../../services/firebase-auth";
 import { notificationService, type PortalNotification } from "../../services/notification.service";
@@ -48,7 +48,6 @@ const navGroups = [
       { to: "/product-types", icon: Boxes, label: "Product Types" },
       { to: "/variants", icon: Sliders, label: "Variants" },
       { to: "/templates", icon: LayoutTemplate, label: "Templates" },
-      { to: "/images", icon: Image, label: "Images" },
     ]
   },
   {
@@ -89,7 +88,6 @@ const pageTitles: Record<string, string> = {
   "/categories": "Categories",
   "/pricing": "Pricing",
   "/business-printing": "Business Printing",
-  "/images": "Image Management",
   "/product-types": "Product Types",
   "/variants": "Variants",
   "/templates": "Template Definitions",
