@@ -30,7 +30,7 @@ import ProductsPage from './pages/catalog/ProductsPage';
 import CategoriesPage from './pages/catalog/CategoriesPage';
 import PricingPage from './pages/catalog/PricingPage';
 import BusinessPrintingPage from './pages/catalog/BusinessPrintingPage';
-import ImagesPage from './pages/media/ImagesPage';
+
 import ProductTypesPage from './pages/catalog/ProductTypesPage';
 import VariantsPage from './pages/catalog/VariantsPage';
 import TemplateDefinitionsPage from './pages/catalog/TemplateDefinitionsPage';
@@ -128,7 +128,7 @@ const App = () => {
             <Route path="categories" element={<CategoriesPage />} />
             <Route path="pricing" element={<PricingPage />} />
             <Route path="business-printing" element={<BusinessPrintingPage />} />
-            <Route path="images" element={<ImagesPage />} />
+           
             <Route path="product-types" element={<ProductTypesPage />} />
             <Route path="variants" element={<VariantsPage />} />
             <Route path="templates" element={<TemplateDefinitionsPage />} />
