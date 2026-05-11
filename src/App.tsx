@@ -30,10 +30,11 @@ import ProductsPage from './pages/catalog/ProductsPage';
 import CategoriesPage from './pages/catalog/CategoriesPage';
 import PricingPage from './pages/catalog/PricingPage';
 import BusinessPrintingPage from './pages/catalog/BusinessPrintingPage';
-import ImagesPage from './pages/media/ImagesPage';
+
 import ProductTypesPage from './pages/catalog/ProductTypesPage';
 import VariantsPage from './pages/catalog/VariantsPage';
 import TemplateDefinitionsPage from './pages/catalog/TemplateDefinitionsPage';
+import CustomizationEditorPage from './pages/CustomizationEditorPage';
 import { getStoredAdminUser } from './api/auth';
 
 const App = () => {
@@ -127,10 +128,12 @@ const App = () => {
             <Route path="categories" element={<CategoriesPage />} />
             <Route path="pricing" element={<PricingPage />} />
             <Route path="business-printing" element={<BusinessPrintingPage />} />
-            <Route path="images" element={<ImagesPage />} />
+           
             <Route path="product-types" element={<ProductTypesPage />} />
             <Route path="variants" element={<VariantsPage />} />
             <Route path="templates" element={<TemplateDefinitionsPage />} />
+            <Route path="customization" element={<CustomizationEditorPage />} />
+            <Route path="customization-editor" element={<CustomizationEditorPage />} />
           </Route>
           <Route path="*" element={<Navigate to={isAuthenticated ? '/dashboard' : '/login'} replace />} />
         </Routes>
